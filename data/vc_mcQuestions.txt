@@ -1,0 +1,2 @@
+What is the platform for version control?|Github|Stubhub|Grubhub|Codehub
+Why do we use branches?|Helps in merging different programming languages into one repository|Allows developers to create and test new features without affecting source code|Ensures that every file in the repository is locked for a single user|Automatically resolves all merge conflicts without user intervention

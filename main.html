@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+    <!-- Scripts -->
+    <script>
+        let score = 0;
+        let total = 0;
+        let questionTopic = ""; // Initialize questionTopic
+        let currentQuestionId = null; // Initialize currentQuestionId
+
+        // Existing Functions
+        function listTopics() {
+            fetch('http://localhost:8400/optimusprime/')
+            .then((resp) => resp.json())
+            .then(function(data){
+                // Build the HTML content for the list of topics
+                let content = `<b>Available Topics:</b>`;
+                if (data.services && data.services.length > 0) {
+                    content += '<ul>';
+                    data.services.forEach(function(topic) {
+                        content += `<li>${topic}</li>`;
+                    });
+                    content += '</ul>';
+                }
+
+                // Display the content
+                document.getElementById("result").innerHTML = content;
+            })
+            .catch(function(error) {
+                console.error("Error fetching topics:", error);
+                document.getElementById("result").innerHTML = "<b>Error fetching topics.</b>";
+            });
+        }
+
+        function populateTopicDropdown() {
+            fetch('http://localhost:8400/optimusprime/')
+                .then((resp) => resp.json())
+                .then(function(data) {
+                    // Ensure the data contains the 'services' key
+                    if (data.services && Array.isArray(data.services)) {
+                        const topicDropdown = document.getElementById('topicDropdown');
+                        
+                        if (topicDropdown) {
+                            // Clear any existing options (to avoid duplicates)
+                            topicDropdown.innerHTML = '<option value="" disabled selected>Select a topic</option>';
+                            
+                            // Populate the dropdown with the services
+                            data.services.forEach((service) => {
+                                let option = document.createElement('option');
+                                option.value = service; // Set the value to the service name
+                                option.textContent = service; // Display the service name as text
+                                topicDropdown.appendChild(option);
+                            });
+                        } else {
+                            console.error("Dropdown element not found.");
+                        }
+                    } else {
+                        console.error("Invalid API response: 'services' key not found or not an array.");
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error fetching topics:', error);
+                });
+        }
+
+        function randomQuestion() {
+            fetch('http://localhost:8400/optimusprime/randomQuestion')
+            .then((resp) => resp.json())
+            .then(function(data){
+                let questionUrl = data.link;
+
+                // Fetch the question data
+                fetch(questionUrl)
+                .then((resp) => resp.json())
+                .then(function(questionData){
+                    // Determine question topic based on link
+                    determineQuestionTopic(questionUrl);
+                    
+                    // Determine question type based on the link
+                    if (questionUrl.includes('tf')) {
+                        displayTF(questionData);
+                    }
+                    else if (questionUrl.includes('mc')) {
+                        displayMC(questionData);
+                    }
+                    else if (questionUrl.includes('shortAnswer')) {
+                        displaySA(questionData);
+                    }
+                    else if (questionUrl.includes('matching')) {
+                        displayMA(questionData);
+                    }
+                })
+                .catch(function(error) {
+                    console.error("Error fetching question data:", error);
+                    document.getElementById("result").innerHTML = "<b>Error fetching question data.</b>";
+                });
+            })
+            .catch(function(error) {
+                console.error("Error fetching random question:", error);
+                document.getElementById("result").innerHTML = "<b>Error fetching random question.</b>";
+            });
+        }
+
+        function specificQuestion() {
+            let content = `<b>Topic:</b> <br>
+                           <select id="topicDropdown"></select><br><br>
+                           <b>Type:</b> <br>
+                           <select id="typeDropdown">
+                                <option value="" disabled selected>Select a type</option>
+                                <option value="mc">Multiple Choice</option>
+                                <option value="tf">True/False</option>
+                                <option value="matching">Matching</option>
+                                <option value="shortAnswer">Short Answer</option>
+                            </select> <br><br>
+                            <button onclick="specificQuestionHelper()">Get Question</button>
+                           `;
+                           
+            // Set the dropdown in the result div
+            document.getElementById("result").innerHTML = content;
+            
+            // Populate the dropdown after it's added to the DOM
+            populateTopicDropdown();
+        }
+
+        function specificQuestionHelper() {
+            let topic = document.getElementById('topicDropdown').value;
+            let adjustedTopic = adjustTopic(topic);
+            
+            let type = document.getElementById('typeDropdown').value;
+            if (!type) {
+                alert("Please select a question type.");
+                return;
+            }
+
+            fetch(`http://localhost:8400/optimusprime/question?topic=${adjustedTopic}&type=${type}`)
+            .then((resp) => resp.json())
+            .then(function(data){
+                let questionUrl = data.link;
+
+                // Fetch the question data
+                fetch(questionUrl)
+                .then((resp) => resp.json())
+                .then(function(questionData){
+                    // Determine question topic based on link
+                    determineQuestionTopic(questionUrl);
+                    
+                    // Determine question type based on the link
+                    if (questionUrl.includes('tf')) {
+                        displayTF(questionData);
+                    }
+                    else if (questionUrl.includes('mc')) {
+                        displayMC(questionData);
+                    }
+                    else if (questionUrl.includes('shortAnswer')) {
+                        displaySA(questionData);
+                    }
+                    else if (questionUrl.includes('matching')) {
+                        displayMA(questionData);
+                    }
+                })
+                .catch(function(error) {
+                    console.error("Error fetching question data:", error);
+                    document.getElementById("result").innerHTML = "<b>Error fetching question data.</b>";
+                });
+            })
+            .catch(function(error) {
+                console.error("Error fetching specific question:", error);
+                document.getElementById("result").innerHTML = "<b>Error fetching specific question.</b>";
+            });
+        }
+
+        function specificTopic() {
+            let content = `<b>Topic:</b> <br>
+                           <select id="topicDropdown"></select><br><br>
+                           <button onclick="specificTopicHelper()">Get Question</button>
+                           `;
+                           
+            // Set the dropdown in the result div
+            document.getElementById("result").innerHTML = content;
+            
+            // Populate the dropdown after it's added to the DOM
+            populateTopicDropdown();
+        }
+
+        function specificTopicHelper() {
+            let topic = document.getElementById('topicDropdown').value;
+            let adjustedTopic = adjustTopic(topic);
+            
+            fetch(`http://localhost:8400/optimusprime/questionTopic?topic=${adjustedTopic}`)
+            .then((resp) => resp.json())
+            .then(function(data){
+                let questionUrl = data.link;
+
+                // Fetch the question data
+                fetch(questionUrl)
+                .then((resp) => resp.json())
+                .then(function(questionData){
+                    // Determine question topic based on link
+                    determineQuestionTopic(questionUrl);
+                    
+                    // Determine question type based on the link
+                    if (questionUrl.includes('tf')) {
+                        displayTF(questionData);
+                    }
+                    else if (questionUrl.includes('mc')) {
+                        displayMC(questionData);
+                    }
+                    else if (questionUrl.includes('shortAnswer')) {
+                        displaySA(questionData);
+                    }
+                    else if (questionUrl.includes('matching')) {
+                        displayMA(questionData);
+                    }
+                })
+                .catch(function(error) {
+                    console.error("Error fetching question data:", error);
+                    document.getElementById("result").innerHTML = "<b>Error fetching question data.</b>";
+                });
+            })
+            .catch(function(error) {
+                console.error("Error fetching question by topic:", error);
+                document.getElementById("result").innerHTML = "<b>Error fetching question by topic.</b>";
+            });
+        }
+
+        function specificType() {
+            let content = `<b>Type:</b> <br>
+                           <select id="typeDropdown">
+                                <option value="" disabled selected>Select a type</option>
+                                <option value="mc">Multiple Choice</option>
+                                <option value="tf">True/False</option>
+                                <option value="matching">Matching</option>
+                                <option value="shortAnswer">Short Answer</option>
+                            </select> <br><br>
+                            <button onclick="specificTypeHelper()">Get Question</button>
+                           `;
+                           
+            // Set the dropdown in the result div
+            document.getElementById("result").innerHTML = content;
+        }
+
+        function specificTypeHelper() {
+            let type = document.getElementById('typeDropdown').value;
+            if (!type) {
+                alert("Please select a question type.");
+                return;
+            }
+
+            fetch(`http://localhost:8400/optimusprime/questionType?type=${type}`)
+            .then((resp) => resp.json())
+            .then(function(data){
+                let questionUrl = data.link;
+
+                // Fetch the question data
+                fetch(questionUrl)
+                .then((resp) => resp.json())
+                .then(function(questionData){
+                    // Determine question topic based on link
+                    determineQuestionTopic(questionUrl);
+                    
+                    // Determine question type based on the link
+                    if (questionUrl.includes('tf')) {
+                        displayTF(questionData);
+                    }
+                    else if (questionUrl.includes('mc')) {
+                        displayMC(questionData);
+                    }
+                    else if (questionUrl.includes('shortAnswer')) {
+                        displaySA(questionData);
+                    }
+                    else if (questionUrl.includes('matching')) {
+                        displayMA(questionData);
+                    }
+                })
+                .catch(function(error) {
+                    console.error("Error fetching question data:", error);
+                    document.getElementById("result").innerHTML = "<b>Error fetching question data.</b>";
+                });
+            })
+            .catch(function(error) {
+                console.error("Error fetching question by type:", error);
+                document.getElementById("result").innerHTML = "<b>Error fetching question by type.</b>";
+            });
+        }
+
+        function displayMC(data) {
+            currentQuestionId = data.id;
+
+            let content = `<b>Question:</b> ${data["question"]}<br><br>`;
+            content += `<input type="radio" name="option" value="a"> ${data["a"]}<br>`;
+            content += `<input type="radio" name="option" value="b"> ${data["b"]}<br>`;
+            content += `<input type="radio" name="option" value="c"> ${data["c"]}<br>`;
+            content += `<input type="radio" name="option" value="d"> ${data["d"]}<br><br>`;
+            content += `<button onclick="submitMC()">Submit Answer</button>`;
+            
+            document.getElementById("result").innerHTML = content;
+        }
+
+        function displayTF(data) {
+            currentQuestionId = data.id;
+            // Build the HTML content for a true/false question
+            let content = `<b>Question:</b> ${data["question"]}<br><br>`;
+            content += `<input type="radio" name="option" value="a"> ${data["a"]}<br>`;
+            content += `<input type="radio" name="option" value="b"> ${data["b"]}<br>`;
+            content += `<button onclick="submitTF()">Submit Answer</button>`;
+            
+            document.getElementById("result").innerHTML = content;
+        }
+
+        function displaySA(data) {
+            currentQuestionId = data.id;
+
+            // Build the HTML content for a short-answer question
+            let content = `<b>Question:</b> ${data["question"]}<br><br>`;
+            content += `<input type="text" id="shortAnswerInput" placeholder="Type your answer here"><br><br>`;
+            content += `<button onclick="submitSA()">Submit Answer</button>`;
+            
+            document.getElementById("result").innerHTML = content;
+        }
+
+        function displayMA(data) {
+            currentQuestionId = data.id;
+
+            // Build the HTML content for a matching question
+            let content = `<b>Question:</b> ${data["question"]}<br><br>`;
+
+            // Left-side items
+            const leftItems = data.leftItems;
+            const rightItems = data.rightItems;
+
+            content += '<table>';
+            leftItems.forEach((item, index) => {
+                content += `<tr>
+                    <td>${item}</td>
+                    <td>
+                        <select id="matchingOption${index}">
+                            <option value="" disabled selected>Select</option>
+                            ${rightItems.map((rightItem) => `<option value="${rightItem}">${rightItem}</option>`).join("")}
+                        </select>
+                    </td>
+                </tr>`;
+            });
+            content += '</table><br>';
+            content += `<button onclick="submitMatching(${leftItems.length})">Submit Answer</button>`;
+
+            document.getElementById("result").innerHTML = content;
+        }
+
+        function submitSA() {
+            // Get the user's input
+            const userAnswer = document.getElementById("shortAnswerInput").value;
+
+            if (!userAnswer.trim()) {
+                alert("Please enter an answer!");
+                return;
+            }
+
+            // Send the answer to the server for validation
+            fetch(`http://localhost:8400/optimusprime/${questionTopic}/saAnswers?line=${currentQuestionId}&guess=${encodeURIComponent(userAnswer)}`)
+                .then((resp) => resp.json())
+                .then(function(data) {
+                    // Display the server's response
+                    let content = `<b>Result:</b> ${data.result}<br>`;
+                    if(data.result === "Correct") {
+                        addPoint();
+                    }
+                    addTotal();
+                    document.getElementById("result").innerHTML = content;
+                })
+                .catch(function(error) {
+                    console.error("Error:", error);
+                    alert("There was an error processing your request.");
+                });
+        }
+
+        function submitMatching(numItems) {
+            // Collect user's answers
+            let answers = [];
+            for (let i = 0; i < numItems; i++) {
+                const selectedOption = document.getElementById(`matchingOption${i}`).value;
+                if (!selectedOption) {
+                    alert("Please match all items before submitting!");
+                    return;
+                }
+                answers.push(selectedOption);
+            }
+
+            const requestPayload = {
+                line: currentQuestionId.toString(),
+                answerOne: answers[0],
+                answerTwo: answers[1],
+                answerThree: answers[2],
+                answerFour: answers[3],
+            };
+
+            // Send to server
+            fetch(`http://localhost:8400/optimusprime/${questionTopic}/maAnswers`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestPayload),
+            })
+                .then((resp) => resp.json())
+                .then(function(data) {
+                    // Display the result
+                    let content = `<b>Result:</b> ${data.result}<br>`;
+                    if(data.result === "Correct") {
+                        addPoint();
+                    }
+                    addTotal();
+                    document.getElementById("result").innerHTML = content;
+                })
+                .catch(function(error) {
+                    console.error("Error:", error);
+                    alert("There was an error processing your request.");
+                });
+        }
+
+        function submitMC() {
+            // Get the selected answer
+            const selectedOption = document.querySelector('input[name="option"]:checked');
+
+            if (!selectedOption) {
+                alert("Please select an answer!");
+                return;
+            }
+
+            // Get the value of the selected option (e.g., 'a', 'b', 'c', 'd')
+            let userAnswer;
+            switch(selectedOption.value) {
+                case "a":
+                    userAnswer = 1;
+                    break;
+                case "b":
+                    userAnswer = 2;
+                    break;
+                case "c":
+                    userAnswer = 3;
+                    break;
+                case "d":
+                    userAnswer = 4;
+                    break;
+                default:
+                    userAnswer = null;
+            }
+
+            if (userAnswer === null) {
+                alert("Invalid answer selected.");
+                return;
+            }
+
+            // Send the answer to the server for validation
+            fetch(`http://localhost:8400/optimusprime/${questionTopic}/mcAnswers?line=${currentQuestionId}&guess=${userAnswer}`, {
+                method: 'GET'
+            })
+                .then((resp) => resp.json())
+                .then(function(data) {
+                    // Display the server's response
+                    let content = `<b>Result:</b> ${data.result}<br>`;
+                    if(data.result === "Correct") {
+                        addPoint();
+                    }
+                    addTotal();
+                    document.getElementById("result").innerHTML = content;
+                })
+                .catch(function(error) {
+                    console.error("Error:", error);
+                    alert("There was an error processing your request.");
+                });
+        }
+
+        function submitTF() {
+            // Get the selected answer
+            const selectedOption = document.querySelector('input[name="option"]:checked');
+
+            if (!selectedOption) {
+                alert("Please select an answer!");
+                return;
+            }
+
+            // Get the value of the selected option (e.g., 'a', 'b')
+            let userAnswer;
+            if (selectedOption.value === "a") {
+                userAnswer = 1;
+            }
+            else if (selectedOption.value === "b") {
+                userAnswer = 2;
+            } else {
+                userAnswer = null;
+            }
+
+            if (userAnswer === null) {
+                alert("Invalid answer selected.");
+                return;
+            }
+
+            // Send the answer to the server for validation
+            fetch(`http://localhost:8400/optimusprime/${questionTopic}/tfAnswers?line=${currentQuestionId}&guess=${userAnswer}`, {
+                method: 'GET'
+            })
+                .then((resp) => resp.json())
+                .then(function(data) {
+                    // Display the server's response
+                    let content = `<b>Result:</b> ${data.result}<br>`;
+                    if(data.result === "Correct") {
+                        addPoint();
+                    }
+                    addTotal();
+                    document.getElementById("result").innerHTML = content;
+                })
+                .catch(function(error) {
+                    console.error("Error:", error);
+                    alert("There was an error processing your request.");
+                });
+        }
+
+        function addPoint() {
+            score += 1; // Increment score
+            UpdateScore();
+        }
+
+        function addTotal() {
+            total += 1; // Increment total
+            UpdateScore();
+        }
+
+        function UpdateScore() {
+            document.getElementById("score").textContent = `Score: ${score} / ${total}`; // Update score display
+        }
+
+        // Helper Functions
+        function adjustTopic(topic) {
+            switch(topic) {
+                case "Version Control":
+                    return "versioncontrol";
+                case "Design Patterns":
+                    return "designpattern";
+                case "Testing":
+                    return "testing";
+                case "Software Engineering":
+                    return "software";
+                default:
+                    return "";
+            }
+        }
+
+        function determineQuestionTopic(url) {
+            if (url.includes('designpattern')) {
+                questionTopic = "designpattern";
+            }
+            else if (url.includes('testing')) {
+                questionTopic = "testing";
+            }
+            else if (url.includes('versioncontrol')) {
+                questionTopic = "versioncontrol";
+            }
+            else if (url.includes('software')) {
+                questionTopic = "software";
+            }
+        }
+
+        function createSnowflake() {
+            const snowflake = document.createElement('div');
+            snowflake.classList.add('snowflake');
+            snowflake.textContent = '❄'; 
+            snowflake.style.left = Math.random() * window.innerWidth + 'px';
+            snowflake.style.fontSize = (Math.random() * 10 + 10) + 'px'; 
+            snowflake.style.opacity = Math.random() * 0.5 + 0.5; 
+            snowflake.style.animationDuration = (Math.random() * 3 + 2) + 's'; 
+            snowflake.style.animationDelay = '-' + (Math.random() * 5) + 's'; 
+            document.body.appendChild(snowflake);
+            snowflake.addEventListener('animationend', () => {
+                snowflake.remove();
+            });
+        }
+        setInterval(createSnowflake, 65);
+
+    </script>
+<head>
+    <style>
+        @font-face {
+            font-family: 'Transformers';
+            src: url('fonts/Transformers.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+        body {
+            font-family: 'Transformers', sans-serif;
+            background-image: linear-gradient(to right, #57abeb,#0a5894);
+            position: relative; 
+            overflow: hidden; 
+            height: 100vh;
+            margin: 0; 
+            padding-left: 20px; 
+        }
+        p {
+            font-family: serif;
+            font-size: 18px;
+            padding-left: 20px; 
+        }
+	.navbar {
+	    overflow: hidden;
+	    background-color: #333;
+	    position: fixed; 
+	    bottom: 10%;  
+	    left: 50%;
+	    transform: translateX(-50%);  
+	    width: fit-content;                  
+	    display: flex;               
+	    justify-content: space-evenly;
+	    align-items: center;           
+	    list-style-type: none;
+	    padding: 0;                
+	    margin: 0;                   
+	    border-radius: 8px;          
+	    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);            
+	    z-index: 1000; 
+	}
+        .navbar button {
+            color: #f2f2f2;              
+            text-align: center;         
+            padding: 14px 16px;            
+            text-decoration: none;         
+            background-color: #333;         
+            border: none;                  
+            cursor: pointer;              
+            transition: background-color 0.3s, color 0.3s;
+            font-size: 16px;              
+            border-radius: 4px;                    
+            font-family: 'Transformers', sans-serif;         
+        }
+        .navbar button:hover {
+            background-color: #ddd;        
+            color: black;              
+        }
+        .header-container {
+            display: flex;
+            align-items: center; 
+            justify-content: center;
+            flex-direction: column;
+            margin-top: 50px;
+            z-index: 1000;
+            position: relative;
+        }
+        .header-container h1 {
+            font-weight: normal;
+            font-size: 50px;
+            margin: 0;
+        }
+        .header-container h2 {
+            font-weight: normal;
+            font-size: 25px;
+            margin: 0;
+        }
+          .padded {
+    		padding-left: 20px; 
+  	}
+        #score {
+            z-index: 1000; 
+            position: relative;
+        }
+        .snowflake {
+            position: absolute;
+            top: -50px;
+            color: lightblue;
+            user-select: none; 
+            font-size: 16px;
+            opacity: 0.9;
+            animation: fallAndSway linear forwards;
+            pointer-events: none;
+            z-index: 500; 
+        }
+        @keyframes fallAndSway {
+            0% {
+                transform: translateX(0px) translateY(0px);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(100px) translateY(100vh);
+                opacity: 0;
+            }
+        }
+        
+	footer.snow-pile {
+	  position: fixed;
+	  bottom: 0;
+	  left: 0;
+	  width: 100%;
+	  height: 100px;
+	  background: white;
+	  border-top-left-radius: 100% 20px;
+	  border-top-right-radius: 50% 20px;
+	  box-shadow: 0 -5px 15px rgba(0, 0, 0, 0.1);
+	  overflow: hidden;
+	}
+	footer.snow-pile::before {
+	  content: '';
+	  position: absolute;
+	  top: -50px;
+	  left: 50%;
+	  width: 300px;
+	  height: 100px;
+	  background: white;
+	  border-radius: 50%;
+	  transform: translateX(-70%) rotate(0deg);
+	  box-shadow: 0 -20px 30px rgba(255, 255, 255, 0.8);
+	}
+	footer.snow-pile p {
+	  position: relative;
+	  z-index: 1;
+	  color: #333;
+	  padding-top: 50px;
+	  font-size: 16px;
+	}
+    </style>
+</head>
+    <div class="header-container">
+        <h1>OptimusPrime Service Registry</h1>
+        <h2>Endpoints Rollout!</h2>
+    </div>
+    <h2 class="padded">
+    	<b id="score">Score:</b><br><br>
+    </h2>
+    <div class="navbar">
+        <fieldset>
+            <button type="button" onclick="listTopics()">List Topics</button>
+            <button type="button" onclick="randomQuestion()">Random Question</button>
+            <button type="button" onclick="specificQuestion()">Specific Question</button>
+            <button type="button" onclick="specificTopic()">Specific Topic</button>
+            <button type="button" onclick="specificType()">Specific Type</button>
+        </fieldset>
+    </div>
+  <!-- Snow Pile Footer -->
+  <footer class="snow-pile">
+  </footer>
+    <p id="result"></p>
+</body>
+</html>
+

@@ -1,0 +1,2 @@
+Integration testing ensures that different modules or components of a system work together correctly.|True|False
+Regression testing is performed to test the performance of the system under high load conditions.|True|False

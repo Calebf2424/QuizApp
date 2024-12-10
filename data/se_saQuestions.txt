@@ -1,0 +1,1 @@
+The __________ model is a sequential software development process that flows steadily through the phases of requirement analysis, design, implementation, testing, deployment, and maintenance.

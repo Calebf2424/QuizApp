@@ -1,0 +1,2 @@
+One type of design pattern is called a Prototype|True|False
+You can create many instances of Singleton using Multiton|True|False

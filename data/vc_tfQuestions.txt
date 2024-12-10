@@ -1,0 +1,2 @@
+In version control systems, branching allows developers to work on different features or bug fixes in isolation from the main codebase.|True|False
+A version control system automatically resolves all conflicts when merging branches.|True|False

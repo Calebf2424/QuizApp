@@ -1,0 +1,3 @@
+Docker allows applications to run in isolated environments called containers, which include the application and all its dependencies.|True|False
+In software engineering, the Waterfall model allows developers to easily go back and make changes to previous phases of the project.|True|False
+

@@ -1,0 +1,1 @@
+What term describes the process of integrating changes from multiple contributors into a shared codebase?

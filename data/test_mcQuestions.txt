@@ -1,0 +1,2 @@
+What is not a type of test?|bluebox|whitebox|blackbox|unit testing
+What is a mock?|A tool used for monitoring server performance.|A type of database used for testing purposes.|An object that mimics the behavior of real objects in controlled ways for testing.|A framework for version control.

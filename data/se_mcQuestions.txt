@@ -1,0 +1,2 @@
+What is the main goal of software testing?|To add new features to the software.|To optimize the software for better performance.|To identify defects and ensure the software meets requirements.|To integrate software with hardware components.
+Which software development methodology emphasizes delivering small, functional pieces of software incrementally?|Waterfall|Spiral|V-Model|Agile
