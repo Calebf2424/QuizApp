@@ -1,0 +1,13 @@
+services:
+  selene:
+    image: selene
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8400:8400"
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+          target: /selene
